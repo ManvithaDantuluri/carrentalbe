@@ -30,13 +30,19 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            // Disable CSRF for APIs
             .csrf(csrf -> csrf.disable())
+            // Enable CORS
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            // Disable session creation (stateless API)
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // Disable form and basic auth (for APIs)
+            .formLogin(form -> form.disable())
+            .httpBasic(basic -> basic.disable())
+            // Authorization rules
             .authorizeHttpRequests(auth -> auth
-                // Allow preflight requests from browsers
+                // Allow CORS preflight
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
                 // Public endpoints
                 .requestMatchers(
                     "/", "/index.html",
@@ -45,16 +51,11 @@ public class SecurityConfig {
                     "/api/payments/**",
                     "/actuator/health",
                     "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
-
-                    // Static resources (if any served by backend)
                     "/css/**", "/js/**", "/images/**", "/webjars/**"
                 ).permitAll()
-
-                // Everything else requires auth
+                // All other requests require authentication
                 .anyRequest().authenticated()
             );
-
-        // If you have a JWT filter, add it here with .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
 
         return http.build();
     }
@@ -77,11 +78,11 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    // CORS: allow your frontend (adjust origin/ports as needed)
+    // CORS configuration
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration c = new CorsConfiguration();
-        // For development: allow all. In prod, set your exact origin(s), e.g. http://localhost:3000
+        // Allow all origins during development
         c.setAllowedOriginPatterns(List.of("*"));
         c.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         c.setAllowedHeaders(List.of("*"));
